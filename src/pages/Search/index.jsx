@@ -89,8 +89,8 @@ const Search = () => {
     );
   };
 
-  const companies = searchData?.data || [];
-  const totalItems = searchData?.total || 0;
+  const companies = Array.isArray(searchData?.data) ? searchData.data : [];
+  const totalItems = searchData?.total ?? searchData?.totalItems ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / limit));
 
   const handlePageChange = (newPage) => {
