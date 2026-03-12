@@ -40,41 +40,63 @@ const normalizeOption = (item) => {
   return { id: String(id ?? name), name: String(name ?? id) };
 };
 
-const normalizeCompanies = (items) =>
-  items
-    .map((item) => {
-      if (!item || typeof item !== 'object') return null;
-      const mst =
-        item.mst ??
-        item.MaSoThue ??
-        item.MST ??
-        item.taxCode ??
-        item.TaxCode ??
-        item.Taxcode ??
-        item.Id ??
-        item.ID;
+const normalizeCompany = (item) => {
+  if (!item || typeof item !== 'object') return null;
 
-      return {
-        id: item.id ?? item.ID ?? item.Id ?? mst,
-        mst: mst ? String(mst) : undefined,
-        name:
-          item.name ??
-          item.Title ??
-          item.TenCongTy ??
-          item.TenDoanhNghiep ??
-          item.CompanyName ??
-          item.Ten,
-        address: item.address ?? item.DiaChi ?? item.Address,
-        industry:
-          item.industry ??
-          item.NganhNghe ??
-          item.Industry ??
-          item.NganhNgheChinh ??
-          item.NganhNgheKinhDoanh,
-        industryName: item.industryName ?? item.NganhNghe ?? item.Industry,
-      };
-    })
-    .filter(Boolean);
+  const mst =
+    item.mst ??
+    item.MaSoThue ??
+    item.MST ??
+    item.taxCode ??
+    item.TaxCode ??
+    item.Taxcode ??
+    item.MaSoHienThoi ??
+    item.Id ??
+    item.ID;
+
+  const name =
+    item.name ??
+    item.Title ??
+    item.TenCongTy ??
+    item.TenDoanhNghiep ??
+    item.CompanyName ??
+    item.Ten;
+
+  const address = item.address ?? item.DiaChiCongTy ?? item.DiaChi ?? item.Address;
+
+  const industry =
+    item.industry ??
+    item.NganhNgheTitle ??
+    item.NganhNghe ??
+    item.Industry ??
+    item.NganhNgheChinh ??
+    item.NganhNgheKinhDoanh;
+
+  const representative =
+    item.representative ??
+    item.NguoiDaiDien ??
+    item.ChuSoHuu ??
+    item.GiamDoc ??
+    item.DaiDienPhapLuat;
+
+  const issueDate = item.issueDate ?? item.NgayCap ?? item.NgayBatDauHopDong;
+
+  return {
+    id: item.id ?? item.ID ?? item.Id ?? mst,
+    mst: mst ? String(mst) : undefined,
+    name,
+    address,
+    industry,
+    industryName: item.industryName ?? item.NganhNgheTitle ?? industry,
+    representative,
+    phone: item.phone ?? item.DienThoai ?? item.Phone,
+    email: item.email ?? item.Email,
+    issueDate,
+    status: item.status ?? item.TrangThai ?? item.Status,
+  };
+};
+
+const normalizeCompanies = (items) => items.map(normalizeCompany).filter(Boolean);
 
 export const getCities = async () => {
   try {
@@ -109,7 +131,12 @@ export const getIndustries = async () => {
 export const searchCompanies = async (params) => {
   const response = await axiosInstance.get('/api/company/search', { params });
   const payload = response.data;
-  const list = normalizeList(payload?.data ?? payload);
+  let list = normalizeList(payload?.data ?? payload);
+
+  if (!Array.isArray(list) && payload?.data && typeof payload.data === 'object') {
+    list = [payload.data];
+  }
+
   const total =
     payload?.total ??
     payload?.totalItems ??
@@ -118,7 +145,7 @@ export const searchCompanies = async (params) => {
     payload?.data?.Total ??
     payload?.data?.TotalDoanhNghiep ??
     payload?.TotalDoanhNghiep ??
-    0;
+    (Array.isArray(list) ? list.length : 0);
 
   if (Array.isArray(list)) {
     return { ...payload, data: normalizeCompanies(list), total };
@@ -132,8 +159,8 @@ export const getCompanyDetail = async (mst) => {
   const payload = response.data?.data ?? response.data;
 
   if (payload?.LtsItem && Array.isArray(payload.LtsItem) && payload.LtsItem[0]) {
-    return payload.LtsItem[0];
+    return normalizeCompany(payload.LtsItem[0]);
   }
 
-  return payload;
+  return normalizeCompany(payload) ?? payload;
 };
