@@ -6,25 +6,41 @@ const axiosInstance = axios.create({
 });
 
 let loadingToastId = null;
+let pendingRequests = 0;
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    loadingToastId = toast.loading('Đang tải dữ liệu...');
+    if (pendingRequests === 0) {
+      loadingToastId = toast.loading('Đang tải dữ liệu...');
+    }
+    pendingRequests += 1;
     return config;
   },
   (error) => {
-    if (loadingToastId) toast.dismiss(loadingToastId);
+    pendingRequests = Math.max(0, pendingRequests - 1);
+    if (pendingRequests === 0 && loadingToastId) {
+      toast.dismiss(loadingToastId);
+      loadingToastId = null;
+    }
     return Promise.reject(error);
   }
 );
 
 axiosInstance.interceptors.response.use(
   (response) => {
-    if (loadingToastId) toast.dismiss(loadingToastId);
+    pendingRequests = Math.max(0, pendingRequests - 1);
+    if (pendingRequests === 0 && loadingToastId) {
+      toast.dismiss(loadingToastId);
+      loadingToastId = null;
+    }
     return response;
   },
   (error) => {
-    if (loadingToastId) toast.dismiss(loadingToastId);
+    pendingRequests = Math.max(0, pendingRequests - 1);
+    if (pendingRequests === 0 && loadingToastId) {
+      toast.dismiss(loadingToastId);
+      loadingToastId = null;
+    }
 
     if (error.response) {
       const { status } = error.response;
